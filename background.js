@@ -1,13 +1,20 @@
 // BC.Game Crash Monitor - Background Script
 console.log("BC.Game Crash Monitor: Background script loaded");
 
-class DatabaseManager {
+class FirebaseManager {
   constructor() {
-    // Supabase configuration
-    this.supabaseUrl = "https://tpowdztczaiysxwxnxgr.supabase.co"; // Replace with your Supabase URL
-    this.supabaseKey =
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwb3dkenRjemFpeXN4d3hueGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxMzc4ODUsImV4cCI6MjA3MDcxMzg4NX0.87A0N6SH3iFtPlTKHkK5ogW1MvYYbEoOHPqWkD1Yax8"; // Replace with your Supabase anon key
-    this.tableName = "crash_values";
+    // Firebase configuration - REPLACE WITH YOUR FIREBASE CONFIG
+    this.firebaseConfig = {
+      apiKey: "AIzaSyD1GuKYlnJqty1nPMVXmFRcLMoTNvDMzp4",
+      authDomain: "bc-game-89ca4.firebaseapp.com",
+      databaseURL: "https://bc-game-89ca4-default-rtdb.firebaseio.com",
+      projectId: "bc-game-89ca4",
+      storageBucket: "bc-game-89ca4.firebasestorage.app",
+      messagingSenderId: "839785126231",
+      appId: "1:839785126231:web:9f26be87ab959164f9c612",
+    };
+
+    this.collectionName = "crash_values";
     this.init();
   }
 
@@ -15,7 +22,7 @@ class DatabaseManager {
     // Listen for messages from content script
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.action === "storeValues") {
-        this.storeToDatabase(message.data).then((result) => {
+        this.storeToFirestore(message.data).then((result) => {
           sendResponse(result);
         });
         return true; // Keep message channel open for async response
@@ -23,7 +30,7 @@ class DatabaseManager {
     });
   }
 
-  async storeToDatabase(data) {
+  async storeToFirestore(data) {
     try {
       const value = data.values[0]; // Each entry has one value
       const numericValue = parseFloat(value.replace("×", ""));
@@ -36,34 +43,41 @@ class DatabaseManager {
         created_at: new Date().toISOString(),
       };
 
+      // Use Firebase REST API to add document to Firestore
       const response = await fetch(
-        `${this.supabaseUrl}/rest/v1/${this.tableName}`,
+        `https://firestore.googleapis.com/v1/projects/${this.firebaseConfig.projectId}/databases/(default)/documents/${this.collectionName}`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            apikey: this.supabaseKey,
-            Authorization: `Bearer ${this.supabaseKey}`,
-            Prefer: "return=minimal",
+            Authorization: `Bearer ${this.firebaseConfig.apiKey}`,
           },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            fields: {
+              timestamp: { stringValue: payload.timestamp },
+              crash_value: { stringValue: payload.crash_value },
+              numeric_value: { doubleValue: payload.numeric_value },
+              url: { stringValue: payload.url },
+              created_at: { timestampValue: payload.created_at },
+            },
+          }),
         }
       );
 
       if (response.ok) {
-        console.log("BC.Game Crash Monitor: Value stored to database:", value);
+        console.log("BC.Game Crash Monitor: Value stored to Firebase:", value);
         return { success: true };
       } else {
         const errorText = await response.text();
-        console.error("BC.Game Crash Monitor: Database error:", errorText);
+        console.error("BC.Game Crash Monitor: Firebase error:", errorText);
         return { success: false, error: errorText };
       }
     } catch (error) {
-      console.error("BC.Game Crash Monitor: Error storing to database:", error);
+      console.error("BC.Game Crash Monitor: Error storing to Firebase:", error);
       return { success: false, error: error.message };
     }
   }
 }
 
-// Initialize the database manager
-new DatabaseManager();
+// Initialize the Firebase manager
+new FirebaseManager();

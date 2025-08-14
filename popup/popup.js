@@ -35,7 +35,7 @@ class PopupManager {
       });
 
       if (tab && tab.url && tab.url.includes("bc.game/game/crash")) {
-        this.updateStatus("Active - Storing to database", true);
+        this.updateStatus("Active - Storing to Firebase", true);
       } else {
         this.updateStatus("Navigate to bc.game/game/crash", false);
       }

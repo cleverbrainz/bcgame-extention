@@ -1,101 +1,156 @@
 # BC.Game Crash Monitor - Installation Guide
 
-## Prerequisites: Supabase Setup
+## Prerequisites: Firebase Setup
 
-Before installing the extension, you need to set up a Supabase database:
+Before installing the extension, you need to set up a Firebase project:
 
-1. **Create Supabase Account**
+### 1. Create Firebase Project
 
-   - Go to https://supabase.com
-   - Sign up for a free account
-   - Create a new project
+1. Go to https://console.firebase.google.com
+2. Click "Create a project"
+3. Enter project name (e.g., "bc-game-monitor")
+4. Enable Google Analytics (optional)
+5. Click "Create project"
 
-2. **Create Database Table**
+### 2. Set up Firestore Database
 
-   - Go to your project dashboard
-   - Navigate to "Table Editor"
-   - Create a new table called `crash_values` with these columns:
-     - `id` (int8, primary key, auto-increment)
-     - `timestamp` (timestamptz)
-     - `crash_value` (text)
-     - `numeric_value` (float8)
-     - `url` (text)
-     - `created_at` (timestamptz, default: now())
+1. In your Firebase console, go to "Firestore Database"
+2. Click "Create database"
+3. Choose "Start in test mode" (for development)
+4. Select a location for your database
+5. Click "Done"
 
-3. **Get API Credentials**
-   - Go to "Settings" → "API"
-   - Copy your "Project URL" and "anon public" key
+### 3. Configure Security Rules
+
+1. In Firestore, go to "Rules" tab
+2. Replace the default rules with:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /crash_values/{document} {
+      allow read, write: if true;
+    }
+  }
+}
+```
+
+3. Click "Publish"
+
+### 4. Get Firebase Configuration
+
+1. Go to "Project Settings" (gear icon)
+2. Scroll down to "Your apps" section
+3. Click "Add app" → Web app (</>) icon
+4. Enter app nickname (e.g., "crash-monitor")
+5. Click "Register app"
+6. Copy the Firebase configuration object
 
 ## How to Install the Chrome Extension
 
-1. **Configure Database Connection**
+### 1. Configure Firebase Connection
 
-   - Open `chrome-extension/background.js`
-   - Replace `YOUR_SUPABASE_URL` with your Project URL
-   - Replace `YOUR_SUPABASE_ANON_KEY` with your anon public key
+1. Open `chrome-extension/background.js`
+2. Replace the Firebase configuration with your values:
 
-2. **Open Chrome Extensions Page**
+```javascript
+this.firebaseConfig = {
+  apiKey: "your-api-key",
+  authDomain: "your-project.firebaseapp.com",
+  databaseURL: "https://your-project-default-rtdb.firebaseio.com",
+  projectId: "your-project-id",
+  storageBucket: "your-project.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "your-app-id",
+};
+```
 
-   - Open Google Chrome
-   - Go to `chrome://extensions/` in the address bar
-   - Or click the three dots menu → More tools → Extensions
+### 2. Open Chrome Extensions Page
 
-3. **Enable Developer Mode**
+1. Open Google Chrome
+2. Go to `chrome://extensions/` in the address bar
+3. Or click the three dots menu → More tools → Extensions
 
-   - Toggle the "Developer mode" switch in the top right corner
+### 3. Enable Developer Mode
 
-4. **Load the Extension**
+1. Toggle the "Developer mode" switch in the top right corner
 
-   - Click "Load unpacked" button
-   - Navigate to and select the `chrome-extension` folder
-   - The extension should now appear in your extensions list
+### 4. Load the Extension
 
-5. **Verify Installation**
-   - You should see "BC.Game Crash Monitor" in your extensions
-   - The extension icon should appear in your Chrome toolbar
+1. Click "Load unpacked" button
+2. Navigate to and select the `chrome-extension` folder
+3. The extension should now appear in your extensions list
+
+### 5. Verify Installation
+
+1. You should see "BC.Game Crash Monitor" in your extensions
+2. The extension icon should appear in your Chrome toolbar
 
 ## How to Use
 
-1. **Visit BC.Game**
+### 1. Visit BC.Game
 
-   - Navigate to https://bc.game/game/crash
-   - The extension will automatically start monitoring the page
+1. Navigate to https://bc.game/game/crash
+2. The extension will automatically start monitoring the page
 
-2. **Check Status**
-   - Click the extension icon in your toolbar
-   - Verify it shows "Active - Storing to database"
+### 2. Check Status
+
+1. Click the extension icon in your toolbar
+2. Verify it shows "Active - Storing to Firebase"
 
 ## Features
 
 - **Real-time Monitoring**: Automatically detects when new × values are added to the end of the list
-- **Database Storage**: Stores each new × value to Supabase PostgreSQL database
-- **Individual Entries**: Each crash result is saved as a separate timestamped record
+- **Firebase Storage**: Stores each new × value to Firebase Firestore database
+- **Individual Entries**: Each crash result is saved as a separate timestamped document
 - **Structured Data**: Stores both text value (e.g., "2.38×") and numeric value (2.38) for analysis
 - **Simple Interface**: Minimal popup showing monitoring status
 
 ## Database Schema
 
-The `crash_values` table stores:
+The `crash_values` collection stores documents with:
 
-```sql
-- id: Auto-incrementing primary key
-- timestamp: When the crash occurred (from BC.Game)
-- crash_value: The × value as text (e.g., "2.38×")
-- numeric_value: The numeric part for analysis (e.g., 2.38)
-- url: The BC.Game page URL
-- created_at: When the record was inserted
+```javascript
+{
+  timestamp: "2025-01-14T10:30:00.000Z",
+  crash_value: "2.38×",
+  numeric_value: 2.38,
+  url: "https://bc.game/game/crash",
+  created_at: "2025-01-14T10:30:05.123Z"
+}
 ```
 
 ## Troubleshooting
 
-- **Extension not working**: Make sure you're on the correct BC.Game crash page
-- **Database errors**: Check browser console for connection issues
-- **Permission issues**: Ensure the extension has permission to access bc.game
-- **Supabase issues**: Verify your API credentials and table schema
+### Extension not working
+
+- Make sure you're on the correct BC.Game crash page
+- Check browser console for error messages
+- Verify Firebase configuration is correct
+
+### Database errors
+
+- Check Firebase console for any error logs
+- Verify Firestore security rules allow writes
+- Ensure the project ID matches your configuration
+
+### Permission issues
+
+- Ensure the extension has permission to access bc.game
+- Check if Firestore is properly enabled in your Firebase project
 
 ## Technical Details
 
 - **Target Page**: https://bc.game/game/crash
-- **Storage**: Supabase PostgreSQL database
-- **API**: Uses Supabase REST API for data insertion
+- **Storage**: Firebase Firestore NoSQL database
+- **API**: Uses Firebase REST API for data insertion
 - **Update Frequency**: Checks for changes every 500ms
+- **Data Retention**: Unlimited (depends on Firebase plan)
+
+## Security Notes
+
+- Test mode security rules allow all reads/writes
+- For production, implement proper authentication and security rules
+- API keys are safe to use in client-side code for Firebase
+- Consider implementing rate limiting for production use
