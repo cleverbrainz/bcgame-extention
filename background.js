@@ -1,14 +1,6 @@
 // BC.Game Crash Monitor - Background Script
 console.log("BC.Game Crash Monitor: Background script loaded");
 
-// Import Firebase SDK
-importScripts(
-  "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"
-);
-importScripts(
-  "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"
-);
-
 class FirebaseManager {
   constructor() {
     // Firebase configuration - REPLACE WITH YOUR FIREBASE CONFIG
@@ -23,20 +15,10 @@ class FirebaseManager {
     };
 
     this.collectionName = "crash_values";
-    this.db = null;
     this.init();
   }
 
   init() {
-    try {
-      // Initialize Firebase
-      firebase.initializeApp(this.firebaseConfig);
-      this.db = firebase.firestore();
-      console.log("Firebase initialized successfully");
-    } catch (error) {
-      console.error("Failed to initialize Firebase:", error);
-    }
-
     // Listen for messages from content script
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.action === "storeValues") {
@@ -50,31 +32,40 @@ class FirebaseManager {
 
   async storeToFirestore(data) {
     try {
-      if (!this.db) {
-        throw new Error("Firebase not initialized");
-      }
-
       const value = data.values[0]; // Each entry has one value
       const numericValue = parseFloat(value.replace("×", ""));
 
-      const payload = {
-        timestamp: data.timestamp,
-        crash_value: value,
-        numeric_value: numericValue,
-        url: data.url,
-        created_at: firebase.firestore.FieldValue.serverTimestamp(),
+      const document = {
+        fields: {
+          timestamp: { stringValue: data.timestamp },
+          crash_value: { stringValue: value },
+          numeric_value: { doubleValue: numericValue },
+          url: { stringValue: data.url },
+          created_at: { timestampValue: new Date().toISOString() },
+        },
       };
 
-      // Add document to Firestore
-      const docRef = await this.db.collection(this.collectionName).add(payload);
-
-      console.log(
-        "BC.Game Crash Monitor: Value stored to Firebase:",
-        value,
-        "Document ID:",
-        docRef.id
+      // Use Firestore REST API with API key authentication
+      const response = await fetch(
+        `https://firestore.googleapis.com/v1/projects/${this.firebaseConfig.projectId}/databases/(default)/documents/${this.collectionName}?key=${this.firebaseConfig.apiKey}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(document),
+        }
       );
-      return { success: true, id: docRef.id };
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log("BC.Game Crash Monitor: Value stored to Firebase:", value);
+        return { success: true, id: result.name };
+      } else {
+        const errorText = await response.text();
+        console.error("BC.Game Crash Monitor: Firebase error:", errorText);
+        return { success: false, error: errorText };
+      }
     } catch (error) {
       console.error("BC.Game Crash Monitor: Error storing to Firebase:", error);
       return { success: false, error: error.message };

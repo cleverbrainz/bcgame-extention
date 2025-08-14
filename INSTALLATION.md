@@ -38,7 +38,19 @@ service cloud.firestore {
 
 **Note**: These rules allow all access. For production, implement proper authentication and more restrictive rules.
 
-### 4. Get Firebase Configuration
+### 4. Enable API Key Access
+
+1. Go to Google Cloud Console: https://console.cloud.google.com
+2. Select your Firebase project
+3. Go to "APIs & Services" → "Credentials"
+4. Find your API key and click "Edit"
+5. Under "API restrictions", select "Restrict key"
+6. Enable "Cloud Firestore API"
+7. Save the changes
+
+This allows the Chrome extension to use the API key for Firestore access.
+
+### 5. Get Firebase Configuration
 
 1. Go to "Project Settings" (gear icon)
 2. Scroll down to "Your apps" section
