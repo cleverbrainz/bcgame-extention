@@ -1,8 +1,8 @@
 # BC.Game Crash Monitor - Installation Guide
 
-## Prerequisites: Firebase Setup
+## Prerequisites: Firebase Realtime Database Setup
 
-Before installing the extension, you need to set up a Firebase project:
+This extension uses Firebase Realtime Database for simple, reliable data storage with automatic real-time updates.
 
 ### 1. Create Firebase Project
 
@@ -12,45 +12,17 @@ Before installing the extension, you need to set up a Firebase project:
 4. Enable Google Analytics (optional)
 5. Click "Create project"
 
-### 2. Set up Firestore Database
+### 2. Set up Realtime Database
 
-1. In your Firebase console, go to "Firestore Database"
-2. Click "Create database"
+1. In your Firebase console, go to "Realtime Database"
+2. Click "Create Database"
 3. Choose "Start in test mode" (for development)
 4. Select a location for your database
 5. Click "Done"
 
-### 3. Configure Security Rules
+**That's it!** Realtime Database in test mode automatically allows all reads and writes. No complex security rules needed.
 
-1. In Firestore, go to "Rules" tab
-2. For development, you can use test mode rules (allow all):
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    allow read, write: if true;
-  }
-}
-```
-
-3. Click "Publish"
-
-**Note**: These rules allow all access. For production, implement proper authentication and more restrictive rules.
-
-### 4. Enable API Key Access
-
-1. Go to Google Cloud Console: https://console.cloud.google.com
-2. Select your Firebase project
-3. Go to "APIs & Services" → "Credentials"
-4. Find your API key and click "Edit"
-5. Under "API restrictions", select "Restrict key"
-6. Enable "Cloud Firestore API"
-7. Save the changes
-
-This allows the Chrome extension to use the API key for Firestore access.
-
-### 5. Get Firebase Configuration
+### 3. Get Firebase Configuration
 
 1. Go to "Project Settings" (gear icon)
 2. Scroll down to "Your apps" section
@@ -78,23 +50,30 @@ this.firebaseConfig = {
 };
 ```
 
-### 2. Open Chrome Extensions Page
+**Important**: Make sure the `databaseURL` matches your Realtime Database URL from Firebase console.
+
+### 2. Configure Web Dashboard
+
+1. Open `web-app/app.js`
+2. Replace the Firebase configuration with the same values from step 1
+
+### 3. Open Chrome Extensions Page
 
 1. Open Google Chrome
 2. Go to `chrome://extensions/` in the address bar
 3. Or click the three dots menu → More tools → Extensions
 
-### 3. Enable Developer Mode
+### 4. Enable Developer Mode
 
 1. Toggle the "Developer mode" switch in the top right corner
 
-### 4. Load the Extension
+### 5. Load the Extension
 
 1. Click "Load unpacked" button
 2. Navigate to and select the `chrome-extension` folder
 3. The extension should now appear in your extensions list
 
-### 5. Verify Installation
+### 6. Verify Installation
 
 1. You should see "BC.Game Crash Monitor" in your extensions
 2. The extension icon should appear in your Chrome toolbar
@@ -111,26 +90,37 @@ this.firebaseConfig = {
 1. Click the extension icon in your toolbar
 2. Verify it shows "Active - Storing to Firebase"
 
+### 3. View Live Dashboard
+
+1. Open `web-app/index.html` in your browser
+2. You'll see real-time crash data as it's collected
+
 ## Features
 
-- **Real-time Monitoring**: Automatically detects when new × values are added to the end of the list
-- **Firebase Storage**: Stores each new × value to Firebase Firestore database
-- **Individual Entries**: Each crash result is saved as a separate timestamped document
-- **Structured Data**: Stores both text value (e.g., "2.38×") and numeric value (2.38) for analysis
-- **Simple Interface**: Minimal popup showing monitoring status
+- **Real-time Monitoring**: Automatically detects when new × values are added
+- **Firebase Realtime Database**: Simple, reliable data storage with live updates
+- **Individual Entries**: Each crash result is saved as a separate timestamped record
+- **Live Dashboard**: Web interface with real-time updates and filtering
+- **Data Export**: Export filtered data to CSV files
 
-## Database Schema
+## Database Structure
 
-The `crash_values` collection stores documents with:
+The Realtime Database stores data in this structure:
 
-```javascript
-{
-  timestamp: "2025-01-14T10:30:00.000Z",
-  crash_value: "2.38×",
-  numeric_value: 2.38,
-  url: "https://bc.game/game/crash",
-  created_at: "2025-01-14T10:30:05.123Z"
-}
+```
+crash_values/
+  ├── 1705234567890_abc123/
+  │   ├── timestamp: "2025-01-14T10:30:00.000Z"
+  │   ├── crash_value: "2.38×"
+  │   ├── numeric_value: 2.38
+  │   ├── url: "https://bc.game/game/crash"
+  │   └── created_at: "2025-01-14T10:30:05.123Z"
+  └── 1705234578901_def456/
+      ├── timestamp: "2025-01-14T10:30:15.000Z"
+      ├── crash_value: "5.67×"
+      ├── numeric_value: 5.67
+      ├── url: "https://bc.game/game/crash"
+      └── created_at: "2025-01-14T10:30:20.456Z"
 ```
 
 ## Troubleshooting
@@ -139,30 +129,39 @@ The `crash_values` collection stores documents with:
 
 - Make sure you're on the correct BC.Game crash page
 - Check browser console for error messages
-- Verify Firebase configuration is correct
+- Verify Firebase configuration is correct in both files
 
 ### Database errors
 
 - Check Firebase console for any error logs
-- Verify Firestore security rules allow writes
-- Ensure the project ID matches your configuration
+- Ensure the `databaseURL` is correct
+- Verify Realtime Database is enabled in your Firebase project
 
-### Permission issues
+### Web dashboard not updating
 
-- Ensure the extension has permission to access bc.game
-- Check if Firestore is properly enabled in your Firebase project
+- Check browser console for errors
+- Verify Firebase configuration matches the extension
+- Ensure you're using the correct Firebase SDK scripts
 
 ## Technical Details
 
 - **Target Page**: https://bc.game/game/crash
-- **Storage**: Firebase Firestore NoSQL database
-- **API**: Uses Firebase REST API for data insertion
+- **Storage**: Firebase Realtime Database
+- **API**: Uses Firebase REST API for Chrome extension, Firebase SDK for web dashboard
 - **Update Frequency**: Checks for changes every 500ms
+- **Real-time Updates**: Automatic via Firebase listeners
 - **Data Retention**: Unlimited (depends on Firebase plan)
 
 ## Security Notes
 
-- Test mode security rules allow all reads/writes
+- Test mode allows all reads/writes - perfect for development
 - For production, implement proper authentication and security rules
 - API keys are safe to use in client-side code for Firebase
-- Consider implementing rate limiting for production use
+- Consider rate limiting for production use
+
+## Why Realtime Database?
+
+- **Simpler setup**: No complex security rules needed
+- **Better real-time support**: Built-in live updates
+- **Fewer permission issues**: Test mode works out of the box
+- **Reliable**: Proven technology with automatic scaling
