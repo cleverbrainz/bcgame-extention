@@ -166,9 +166,10 @@ class CrashMonitor {
             newEntries
           );
 
-          // Store only the new values
-          const newValues = newEntries.map((entry) => entry.value);
-          this.storeValues(newValues);
+          // Store each new value individually
+          newEntries.forEach((entry) => {
+            this.storeValues([entry.value]); // Store each value as a separate entry
+          });
         }
 
         // Update our tracking arrays

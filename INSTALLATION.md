@@ -37,21 +37,36 @@
 ## Features
 
 - **Real-time Monitoring**: Automatically detects when new × values are added to the end of the list
-- **Incremental Storage**: Only stores newly added values, not duplicates of existing ones
-- **Historical Storage**: Keeps timestamped records of each new value addition
-- **Data Export**: Copy all data to clipboard in CSV format
-- **Clean Interface**: Easy-to-use popup with recent and historical data
-- **Badge Counter**: Shows number of stored entries on the extension icon
+- **File-based Storage**: Writes each new × value to a `history.txt` file in your Downloads folder
+- **Individual Entries**: Each crash result is saved as a separate timestamped line
+- **Automatic Downloads**: No manual intervention needed - files are saved automatically
+- **Simple Interface**: Minimal popup showing monitoring status
+
+## File Format
+
+Each line in `history.txt` contains:
+
+```
+[Timestamp] - [×Value]
+```
+
+Example:
+
+```
+1/14/2025, 4:45:30 AM - 2.38×
+1/14/2025, 4:45:45 AM - 5.67×
+1/14/2025, 4:46:00 AM - 1.25×
+```
 
 ## Troubleshooting
 
 - **Extension not working**: Make sure you're on the correct BC.Game crash page
-- **No data showing**: Check browser console for any error messages
-- **Permission issues**: Ensure the extension has permission to access bc.game
+- **No files being created**: Check if Chrome has permission to download files
+- **Permission issues**: Ensure the extension has permission to access bc.game and downloads
 
 ## Technical Details
 
 - **Target Page**: https://bc.game/game/crash
-- **Storage**: Uses Chrome's local storage (data stays on your device)
-- **Data Retention**: Keeps last 1000 entries or 30 days of data
+- **Storage**: Writes to `history.txt` files in Downloads folder
+- **File Handling**: Creates new files with unique names if conflicts occur
 - **Update Frequency**: Checks for changes every 500ms

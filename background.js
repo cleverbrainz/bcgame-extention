@@ -1,10 +1,9 @@
 // BC.Game Crash Monitor - Background Script
 console.log("BC.Game Crash Monitor: Background script loaded");
 
-class DataManager {
+class FileManager {
   constructor() {
-    this.maxEntries = 1000;
-    this.maxDays = 30;
+    this.filename = "history.txt";
     this.init();
   }
 
@@ -12,118 +11,41 @@ class DataManager {
     // Listen for messages from content script
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.action === "storeValues") {
-        this.storeValues(message.data);
+        this.appendToFile(message.data);
         sendResponse({ success: true });
-      } else if (message.action === "getValues") {
-        this.getValues().then((data) => {
-          sendResponse({ success: true, data: data });
-        });
-        return true; // Keep message channel open for async response
-      } else if (message.action === "clearHistory") {
-        this.clearHistory().then(() => {
-          sendResponse({ success: true });
-        });
-        return true;
       }
     });
-
-    // Clean up old data on startup
-    this.cleanupOldData();
   }
 
-  async storeValues(newData) {
+  async appendToFile(data) {
     try {
-      // Get existing data
-      const result = await chrome.storage.local.get(["crashValues"]);
-      let crashValues = result.crashValues || [];
+      // Format the data for the file
+      const timestamp = new Date(data.timestamp).toLocaleString();
+      const value = data.values[0]; // Each entry has one value
+      const line = `${timestamp} - ${value}\n`;
 
-      // Add new data
-      crashValues.push(newData);
+      // Create a blob with the new line
+      const blob = new Blob([line], { type: "text/plain" });
 
-      // Keep only the most recent entries
-      if (crashValues.length > this.maxEntries) {
-        crashValues = crashValues.slice(-this.maxEntries);
-      }
+      // Download/append to the file
+      const url = URL.createObjectURL(blob);
 
-      // Store back to storage
-      await chrome.storage.local.set({ crashValues: crashValues });
-
-      console.log("BC.Game Crash Monitor: Values stored successfully", newData);
-
-      // Update badge with current count
-      this.updateBadge(crashValues.length);
-    } catch (error) {
-      console.error("BC.Game Crash Monitor: Error storing values:", error);
-    }
-  }
-
-  async getValues() {
-    try {
-      const result = await chrome.storage.local.get(["crashValues"]);
-      return result.crashValues || [];
-    } catch (error) {
-      console.error("BC.Game Crash Monitor: Error getting values:", error);
-      return [];
-    }
-  }
-
-  async clearHistory() {
-    try {
-      await chrome.storage.local.remove(["crashValues"]);
-      this.updateBadge(0);
-      console.log("BC.Game Crash Monitor: History cleared");
-    } catch (error) {
-      console.error("BC.Game Crash Monitor: Error clearing history:", error);
-    }
-  }
-
-  async cleanupOldData() {
-    try {
-      const result = await chrome.storage.local.get(["crashValues"]);
-      let crashValues = result.crashValues || [];
-
-      if (crashValues.length === 0) return;
-
-      // Remove entries older than maxDays
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - this.maxDays);
-
-      const filteredValues = crashValues.filter((entry) => {
-        const entryDate = new Date(entry.timestamp);
-        return entryDate > cutoffDate;
+      await chrome.downloads.download({
+        url: url,
+        filename: this.filename,
+        conflictAction: "uniquify",
+        saveAs: false,
       });
 
-      // Only update storage if we removed some entries
-      if (filteredValues.length !== crashValues.length) {
-        await chrome.storage.local.set({ crashValues: filteredValues });
-        console.log(
-          `BC.Game Crash Monitor: Cleaned up ${
-            crashValues.length - filteredValues.length
-          } old entries`
-        );
-      }
+      console.log("BC.Game Crash Monitor: Value written to file:", value);
 
-      this.updateBadge(filteredValues.length);
+      // Clean up the blob URL
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) {
-      console.error("BC.Game Crash Monitor: Error cleaning up data:", error);
-    }
-  }
-
-  updateBadge(count) {
-    try {
-      if (count > 0) {
-        chrome.action.setBadgeText({
-          text: count > 99 ? "99+" : count.toString(),
-        });
-        chrome.action.setBadgeBackgroundColor({ color: "#4CAF50" });
-      } else {
-        chrome.action.setBadgeText({ text: "" });
-      }
-    } catch (error) {
-      console.error("BC.Game Crash Monitor: Error updating badge:", error);
+      console.error("BC.Game Crash Monitor: Error writing to file:", error);
     }
   }
 }
 
-// Initialize the data manager
-new DataManager();
+// Initialize the file manager
+new FileManager();
