@@ -4,6 +4,7 @@ console.log("BC.Game Crash Monitor: Content script loaded");
 class CrashMonitor {
   constructor() {
     this.lastValues = [];
+    this.lastIds = [];
     this.observer = null;
     this.debounceTimer = null;
     this.isMonitoring = false;
@@ -115,42 +116,69 @@ class CrashMonitor {
 
   extractValues(element) {
     try {
-      // Find all spans that contain × values
-      const valueSpans = element.querySelectorAll(
-        'span[class*="font-extrabold"]'
+      // Find all direct child divs that contain the crash data
+      const childDivs = element.querySelectorAll(
+        "div.flex.items-center.justify-center.gap-1.px-2.h-full.cursor-pointer"
       );
       const currentValues = [];
+      const currentIds = [];
 
-      valueSpans.forEach((span) => {
-        const text = span.textContent.trim();
-        // Match pattern like "7.28×", "1.14×", etc.
-        if (/^\d+\.\d+×$/.test(text)) {
-          currentValues.push(text);
+      childDivs.forEach((div) => {
+        // Find the × value span within this div
+        const valueSpan = div.querySelector('span[class*="font-extrabold"]');
+        // Find the ID span within this div
+        const idSpan = div.querySelector(
+          "span.text-xs.leading-tight.text-tertiary.font-semibold"
+        );
+
+        if (valueSpan && idSpan) {
+          const valueText = valueSpan.textContent.trim();
+          const idText = idSpan.textContent.trim();
+
+          // Match pattern like "7.28×", "1.14×", etc.
+          if (/^\d+\.\d+×$/.test(valueText) && /^\d+$/.test(idText)) {
+            currentValues.push(valueText);
+            currentIds.push(idText);
+          }
         }
       });
 
       if (currentValues.length > 0) {
-        // Check if new values were added (current length > previous length)
-        if (currentValues.length > this.lastValues.length) {
-          // Get only the new values (the ones added at the end)
-          const newValues = currentValues.slice(this.lastValues.length);
+        // Check if new values were added by comparing IDs (more reliable than length)
+        const newEntries = [];
 
-          console.log("BC.Game Crash Monitor: New values added:", newValues);
+        for (let i = 0; i < currentIds.length; i++) {
+          const id = currentIds[i];
+          const value = currentValues[i];
+
+          // If this ID wasn't in our last seen IDs, it's new
+          if (!this.lastIds || !this.lastIds.includes(id)) {
+            newEntries.push({
+              id: id,
+              value: value,
+            });
+          }
+        }
+
+        if (newEntries.length > 0) {
+          console.log(
+            "BC.Game Crash Monitor: New entries detected:",
+            newEntries
+          );
 
           // Store only the new values
+          const newValues = newEntries.map((entry) => entry.value);
           this.storeValues(newValues);
-
-          // Update our tracking array
-          this.lastValues = [...currentValues];
-        } else if (currentValues.length < this.lastValues.length) {
-          // If the list got shorter (page refresh or reset), store all current values
-          console.log(
-            "BC.Game Crash Monitor: List reset, storing all values:",
-            currentValues
-          );
-          this.lastValues = [...currentValues];
-          this.storeValues(currentValues);
         }
+
+        // Update our tracking arrays
+        this.lastValues = [...currentValues];
+        this.lastIds = [...currentIds];
+      } else if (this.lastValues.length > 0) {
+        // If we had values before but none now, the page might have reset
+        console.log("BC.Game Crash Monitor: Page appears to have reset");
+        this.lastValues = [];
+        this.lastIds = [];
       }
     } catch (error) {
       console.error("BC.Game Crash Monitor: Error extracting values:", error);
