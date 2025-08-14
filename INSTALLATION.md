@@ -23,20 +23,20 @@ Before installing the extension, you need to set up a Firebase project:
 ### 3. Configure Security Rules
 
 1. In Firestore, go to "Rules" tab
-2. Replace the default rules with:
+2. For development, you can use test mode rules (allow all):
 
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /crash_values/{document} {
-      allow read, write: if true;
-    }
+    allow read, write: if true;
   }
 }
 ```
 
 3. Click "Publish"
+
+**Note**: These rules allow all access. For production, implement proper authentication and more restrictive rules.
 
 ### 4. Get Firebase Configuration
 

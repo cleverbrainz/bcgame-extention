@@ -6,7 +6,11 @@
 
   "permissions": ["storage", "activeTab"],
 
-  "host_permissions": ["https://bc.game/*"],
+  "host_permissions": [
+    "https://bc.game/*",
+    "https://firestore.googleapis.com/*",
+    "https://www.gstatic.com/*"
+  ],
 
   "content_scripts": [
     {
