@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "BC.Game Crash Monitor",
+  "version": "1.0.0",
+  "description": "Monitor and track × values from BC.Game crash game",
+
+  "permissions": ["storage", "activeTab"],
+
+  "host_permissions": ["https://bc.game/*"],
+
+  "content_scripts": [
+    {
+      "matches": ["https://bc.game/game/crash*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "BC.Game Crash Monitor"
+  }
+}
