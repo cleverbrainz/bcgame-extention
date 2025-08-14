@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Monitor and track × values from BC.Game crash game",
 
-  "permissions": ["storage", "activeTab", "downloads"],
+  "permissions": ["storage", "activeTab"],
 
   "host_permissions": ["https://bc.game/*"],
 

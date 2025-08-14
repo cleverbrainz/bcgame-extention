@@ -1,9 +1,13 @@
 // BC.Game Crash Monitor - Background Script
 console.log("BC.Game Crash Monitor: Background script loaded");
 
-class FileManager {
+class DatabaseManager {
   constructor() {
-    this.filename = "history.txt";
+    // Supabase configuration
+    this.supabaseUrl = "https://tpowdztczaiysxwxnxgr.supabase.co"; // Replace with your Supabase URL
+    this.supabaseKey =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwb3dkenRjemFpeXN4d3hueGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxMzc4ODUsImV4cCI6MjA3MDcxMzg4NX0.87A0N6SH3iFtPlTKHkK5ogW1MvYYbEoOHPqWkD1Yax8"; // Replace with your Supabase anon key
+    this.tableName = "crash_values";
     this.init();
   }
 
@@ -11,41 +15,55 @@ class FileManager {
     // Listen for messages from content script
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.action === "storeValues") {
-        this.appendToFile(message.data);
-        sendResponse({ success: true });
+        this.storeToDatabase(message.data).then((result) => {
+          sendResponse(result);
+        });
+        return true; // Keep message channel open for async response
       }
     });
   }
 
-  async appendToFile(data) {
+  async storeToDatabase(data) {
     try {
-      // Format the data for the file
-      const timestamp = new Date(data.timestamp).toLocaleString();
       const value = data.values[0]; // Each entry has one value
-      const line = `${timestamp} - ${value}\n`;
+      const numericValue = parseFloat(value.replace("×", ""));
 
-      // Create a blob with the new line
-      const blob = new Blob([line], { type: "text/plain" });
+      const payload = {
+        timestamp: data.timestamp,
+        crash_value: value,
+        numeric_value: numericValue,
+        url: data.url,
+        created_at: new Date().toISOString(),
+      };
 
-      // Download/append to the file
-      const url = URL.createObjectURL(blob);
+      const response = await fetch(
+        `${this.supabaseUrl}/rest/v1/${this.tableName}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: this.supabaseKey,
+            Authorization: `Bearer ${this.supabaseKey}`,
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
-      await chrome.downloads.download({
-        url: url,
-        filename: this.filename,
-        conflictAction: "uniquify",
-        saveAs: false,
-      });
-
-      console.log("BC.Game Crash Monitor: Value written to file:", value);
-
-      // Clean up the blob URL
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      if (response.ok) {
+        console.log("BC.Game Crash Monitor: Value stored to database:", value);
+        return { success: true };
+      } else {
+        const errorText = await response.text();
+        console.error("BC.Game Crash Monitor: Database error:", errorText);
+        return { success: false, error: errorText };
+      }
     } catch (error) {
-      console.error("BC.Game Crash Monitor: Error writing to file:", error);
+      console.error("BC.Game Crash Monitor: Error storing to database:", error);
+      return { success: false, error: error.message };
     }
   }
 }
 
-// Initialize the file manager
-new FileManager();
+// Initialize the database manager
+new DatabaseManager();
