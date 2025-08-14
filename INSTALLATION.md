@@ -36,10 +36,11 @@
 
 ## Features
 
-- **Real-time Monitoring**: Automatically detects changes in × values
-- **Historical Storage**: Keeps timestamped records of all changes
+- **Real-time Monitoring**: Automatically detects when new × values are added to the end of the list
+- **Incremental Storage**: Only stores newly added values, not duplicates of existing ones
+- **Historical Storage**: Keeps timestamped records of each new value addition
 - **Data Export**: Copy all data to clipboard in CSV format
-- **Clean Interface**: Easy-to-use popup with current and historical data
+- **Clean Interface**: Easy-to-use popup with recent and historical data
 - **Badge Counter**: Shows number of stored entries on the extension icon
 
 ## Troubleshooting

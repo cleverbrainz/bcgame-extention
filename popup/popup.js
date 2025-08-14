@@ -82,12 +82,18 @@ class PopupManager {
   }
 
   updateCurrentValues() {
-    if (!this.currentData || !this.currentData.values) {
+    if (!this.historyData || this.historyData.length === 0) {
       this.showNoCurrentData();
       return;
     }
 
-    const valuesHtml = this.currentData.values
+    // Show the last 10 most recent values from all entries
+    const recentValues = this.historyData
+      .slice(-10)
+      .flatMap((entry) => entry.values)
+      .slice(-10);
+
+    const valuesHtml = recentValues
       .map((value) => {
         const numericValue = parseFloat(value.replace("×", ""));
         const chipClass = numericValue >= 2.0 ? "success" : "warning";

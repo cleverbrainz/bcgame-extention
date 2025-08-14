@@ -119,25 +119,37 @@ class CrashMonitor {
       const valueSpans = element.querySelectorAll(
         'span[class*="font-extrabold"]'
       );
-      const values = [];
+      const currentValues = [];
 
       valueSpans.forEach((span) => {
         const text = span.textContent.trim();
         // Match pattern like "7.28×", "1.14×", etc.
         if (/^\d+\.\d+×$/.test(text)) {
-          values.push(text);
+          currentValues.push(text);
         }
       });
 
-      if (values.length > 0) {
-        // Check if values have changed
-        const valuesString = values.join(",");
-        const lastValuesString = this.lastValues.join(",");
+      if (currentValues.length > 0) {
+        // Check if new values were added (current length > previous length)
+        if (currentValues.length > this.lastValues.length) {
+          // Get only the new values (the ones added at the end)
+          const newValues = currentValues.slice(this.lastValues.length);
 
-        if (valuesString !== lastValuesString) {
-          console.log("BC.Game Crash Monitor: New values detected:", values);
-          this.lastValues = [...values];
-          this.storeValues(values);
+          console.log("BC.Game Crash Monitor: New values added:", newValues);
+
+          // Store only the new values
+          this.storeValues(newValues);
+
+          // Update our tracking array
+          this.lastValues = [...currentValues];
+        } else if (currentValues.length < this.lastValues.length) {
+          // If the list got shorter (page refresh or reset), store all current values
+          console.log(
+            "BC.Game Crash Monitor: List reset, storing all values:",
+            currentValues
+          );
+          this.lastValues = [...currentValues];
+          this.storeValues(currentValues);
         }
       }
     } catch (error) {
